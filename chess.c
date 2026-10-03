@@ -6,9 +6,13 @@
 #include <assert.h>
 #include <ctype.h>
 
-#define EN_PASSANT 5
-#define CASTLE_LONG 6
-#define CASTLE_SHORT 8
+typedef enum {
+    ILLEGAL = 0,
+    LEGAL = 1,
+    EN_PASSANT = 5,
+    CASTLE_LONG = 6,
+    CASTLE_SHORT = 8
+} Result;
 
 typedef enum {
     KING = 1,
@@ -176,7 +180,7 @@ int can_move_to(int src, int dest) {
     return 1;
 }
 
-int can_do_move(int src, int dest, int turn, int castle);
+Result can_do_move(int src, int dest, int turn, int castle);
 
 int is_in_check(Player p) {
     int king_row = 0;
@@ -246,19 +250,19 @@ void set_piece(int index, Piece piece) {
         board[r][c] = piece;
 }
 
-int can_do_move(int src, int dest, int turn, int castle) {
+Result can_do_move(int src, int dest, int turn, int castle) {
         int src_row = src / 8;
         int src_col = src % 8;
         int dest_row = dest / 8;
         int dest_col = dest % 8;
         if (board[dest_row][dest_col] * turn > 0) {
             errstring = ("You can't capture your own piece\n");
-            return 0;
+            return ILLEGAL;
         }
 
         if (src == dest) {
             errstring = ("You can't not move\n");
-            return 0;
+            return ILLEGAL;
         }
 
         switch (abs(board[src_row][src_col])) {
@@ -266,10 +270,10 @@ int can_do_move(int src, int dest, int turn, int castle) {
                 int dx = abs(dest_row - src_row);
                 int dy = abs(dest_col - src_col);
                 if (min(dx,dy) == 1 && max(dx,dy) == 2) {
-                    // legal knight move
+                    return LEGAL;
                 } else {
                     errstring = ("Horse don't move like that\n");
-                    return 0;
+                    return ILLEGAL;
                 }
                 break;
             case PAWN:
@@ -280,30 +284,33 @@ int can_do_move(int src, int dest, int turn, int castle) {
                     int start_row = turn == BLACK ? 1 : 6;
                     if (dx == 0 && to == 0 && dy == turn) {
                         // this is us moving forward by 1
+                        return LEGAL;
                     } else if (dx == 0 && to == 0 && dy == turn * 2 && start_row == src_row) {
                         // this is us moving forward by 2 on the first move
                         // check if the middle space is clear
                         if (board[(dest_row + src_row) / 2][dest_col]) {
                             errstring = ("noclip is not enabled\n");
-                            return 0;
+                            return ILLEGAL;
                         }
                         next_en_passant = (dest_row + src_row) * 4 + dest_col;
+                        return LEGAL;
                     } else if (dx == 1 && !to && dy == turn && en_passant != -1) {
                         // wtf en passant???
                         int ep_row = en_passant / 8;
                         int ep_col = en_passant % 8;
                         if (ep_row != dest_row || ep_col != dest_col) {
                             errstring = ("this en passant is incorrect\n");
-                            return 0;
+                            return ILLEGAL;
                         }
                         return EN_PASSANT; // lmao
                     }
                     else if (dx == 1 && dy == turn && to) {
                         // this is a capture, so it's legal
+                        return LEGAL;
                     }
                     else {
                         errstring = ("Illegal pawn move\n");
-                        return 0;
+                        return ILLEGAL;
                     }
                     break;
                 }
@@ -314,12 +321,13 @@ int can_do_move(int src, int dest, int turn, int castle) {
                     if (abs(dx) == abs(dy) || dx == 0 || dy == 0) {
                         if (!can_move_to(src, dest)) {
                             errstring = ("there was a car crash\n");
-                            return 0;
+                            return ILLEGAL;
                         }
+                        return LEGAL;
                     }
                     else {
                         errstring = ("bro has never played chess before lol\n");
-                        return 0;
+                        return ILLEGAL;
                     }
                     break;
                 }
@@ -330,12 +338,13 @@ int can_do_move(int src, int dest, int turn, int castle) {
                     if (dx == 0 || dy == 0) {
                         if (!can_move_to(src, dest)) {
                             errstring = ("there was a car crash\n");
-                            return 0;
+                            return ILLEGAL;
                         }
+                        return LEGAL;
                     }
                     else {
                         errstring = ("bro has never played chess before lol\n");
-                        return 0;
+                        return ILLEGAL;
                     }
                     break;
                 }
@@ -346,12 +355,13 @@ int can_do_move(int src, int dest, int turn, int castle) {
                     if (abs(dx) == abs(dy)) {
                         if (!can_move_to(src, dest)) {
                             errstring = ("there was a car crash\n");
-                            return 0;
+                            return ILLEGAL;
                         }
+                        return LEGAL;
                     }
                     else {
                         errstring = ("bro has never played chess before lol\n");
-                        return 0;
+                        return ILLEGAL;
                     }
                     break;
                 }
@@ -362,11 +372,12 @@ int can_do_move(int src, int dest, int turn, int castle) {
                     int king_start = turn == BLACK ? 4 : 60;
                     int rook_row = turn == BLACK ? 0 : 7*8;
                     if (abs(dx) <= 1 && abs(dy) <= 1) {
+                        return LEGAL;
                     }
                     else if (castle && !(has_moved & (1ULL << king_start))) {
                         if (is_in_check(turn)) {
                             errstring = ("you're in check buddy\n");
-                            return 0;
+                            return ILLEGAL;
                         }
                         if (dest_col == 1) { // B
                             if (!(has_moved & (1ULL << rook_row))) {
@@ -375,7 +386,7 @@ int can_do_move(int src, int dest, int turn, int castle) {
                                 int c = rook_row + 3;
                                 if (get_piece(a) || get_piece(b) || get_piece(c)) {
                                     errstring = ("somebody in the way\n");
-                                    return 0;
+                                    return ILLEGAL;
                                 }
                                 // we're in business
                                 int result = CASTLE_LONG;
@@ -383,15 +394,15 @@ int can_do_move(int src, int dest, int turn, int castle) {
 
                                 set_piece(rook_row + 4, 0);
                                 set_piece(c, KING * turn);
-                                if (is_in_check(turn)) result = 0;
+                                if (is_in_check(turn)) result = ILLEGAL;
 
                                 set_piece(c, 0);
                                 set_piece(b, KING * turn);
-                                if (is_in_check(turn)) result = 0;
+                                if (is_in_check(turn)) result = ILLEGAL;
 
                                 set_piece(b, 0);
                                 set_piece(a, KING * turn);
-                                if (is_in_check(turn)) result = 0;
+                                if (is_in_check(turn)) result = ILLEGAL;
 
                                 set_piece(a, 0);
                                 set_piece(b, 0);
@@ -405,7 +416,7 @@ int can_do_move(int src, int dest, int turn, int castle) {
                                 int b = rook_row + 5;
                                 if (get_piece(a) || get_piece(b)) {
                                     errstring = ("somebody in the way\n");
-                                    return 0;
+                                    return ILLEGAL;
                                 }
                                 // we're in business
                                 int result = CASTLE_SHORT;
@@ -413,11 +424,11 @@ int can_do_move(int src, int dest, int turn, int castle) {
 
                                 set_piece(rook_row + 4, 0);
                                 set_piece(b, KING * turn);
-                                if (is_in_check(turn)) result = 0;
+                                if (is_in_check(turn)) result = ILLEGAL;
 
                                 set_piece(b, 0);
                                 set_piece(a, KING * turn);
-                                if (is_in_check(turn)) result = 0;
+                                if (is_in_check(turn)) result = ILLEGAL;
 
                                 set_piece(a, 0);
                                 set_piece(b, 0);
@@ -426,18 +437,15 @@ int can_do_move(int src, int dest, int turn, int castle) {
                             }
                         }
                         errstring = ("nahhhhh\n");
-                        return 0;
-                    //check if the e8,e1 has be set
-                    //if we try to move to g check if h8 is set
-                    //if we try to move to b check if h8 is set
+                        return ILLEGAL;
                     } else {
                         errstring = ("sorry king\n");
-                        return 0;
+                        return ILLEGAL;
                     }
                     break;
                 }
         }
-        return 1;
+        return LEGAL;
 }
 
 int main() {
@@ -464,12 +472,13 @@ int main() {
         int dest_row = dest / 8;
         int dest_col = dest % 8;
 
-        int result = 0;
-        if (!(result = can_do_move(src, dest, turn, 1))) {
+        Result result = can_do_move(src, dest, turn, 1);
+        if (result == ILLEGAL) {
             printf("%s", errstring);
             continue;
         }
 
+        // apply the move to the board
         int temp = board[dest_row][dest_col];
         board[dest_row][dest_col] = board[src_row][src_col];
         board[src_row][src_col] = 0;
@@ -506,7 +515,7 @@ int main() {
             printf("that would leave you in check\n");
             continue;
         }
-        // we have confirmed our move
+        // we have now confirmed our move!
 
 
         // basic auto-promotion to queen
