@@ -31,7 +31,7 @@ typedef enum {
 
 // global state
 Player turn = WHITE;
-char board[8][8] = {};
+signed char board[8][8] = {};
 int en_passant = -1;
 int next_en_passant = -1;
 // bit field
