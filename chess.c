@@ -510,7 +510,7 @@ int main() {
             board[src_row][src_col] = board[dest_row][dest_col];
             board[dest_row][dest_col] = temp;
             if (result == EN_PASSANT) {
-                int ep_row = (en_passant / 8) - turn;
+                int ep_row = (en_passant / 8) + turn;
                 int ep_col = en_passant % 8;
                 board[ep_row][ep_col] = PAWN * -turn;
             }
@@ -524,7 +524,7 @@ int main() {
         int promote_rank = turn == BLACK ? 7 : 0;
         if(abs(board[dest_row][dest_col]) == PAWN) {
             if (dest_row == promote_rank) {
-                board[dest_row][dest_col] = QUEEN;
+                board[dest_row][dest_col] = QUEEN * turn;
             }
         }
 
