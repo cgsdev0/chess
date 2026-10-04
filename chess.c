@@ -15,6 +15,7 @@ typedef enum {
 } Result;
 
 typedef enum {
+    LOL = -1,
     KING = 1,
     QUEEN,
     ROOK,
