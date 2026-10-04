@@ -110,6 +110,7 @@ void render() {
     else
     printf("Black's Turn\n\n");
 }
+
 void init_board() {
     board[0][0] = board[0][7] = -ROOK;
     board[0][1] = board[0][6] = -KNIGHT;
@@ -130,7 +131,7 @@ void init_board() {
     board[7][4] = KING;
 }
 
-int to_index(char *str, size_t size) {
+int str_to_index(char *str, size_t size) {
     if (size != 3) return -1;
     char first = tolower(str[0]);
     if (first >= 'a' && first <= 'h') {
@@ -149,7 +150,7 @@ int get_position(char *prompt) {
             size_t size = 0;
             printf("%s", prompt);
             size_t n = getline(&buf, &size, stdin);
-            int src = to_index(buf, n);
+            int src = str_to_index(buf, n);
             free(buf);
             if (src == -1) {
                 printf("What the fak\n");
@@ -157,9 +158,9 @@ int get_position(char *prompt) {
             }
             return src;
         }
-
 }
-int can_move_to(int src, int dest) {
+
+int is_path_clear(int src, int dest) {
     int src_row = src / 8;
     int src_col = src % 8;
     int dest_row = dest / 8;
@@ -319,7 +320,7 @@ Result can_do_move(int src, int dest, int turn, int castle) {
                     int dx = dest_col - src_col;
                     int dy = dest_row - src_row;
                     if (abs(dx) == abs(dy) || dx == 0 || dy == 0) {
-                        if (!can_move_to(src, dest)) {
+                        if (!is_path_clear(src, dest)) {
                             errstring = ("there was a car crash\n");
                             return ILLEGAL;
                         }
@@ -336,7 +337,7 @@ Result can_do_move(int src, int dest, int turn, int castle) {
                     int dx = dest_col - src_col;
                     int dy = dest_row - src_row;
                     if (dx == 0 || dy == 0) {
-                        if (!can_move_to(src, dest)) {
+                        if (!is_path_clear(src, dest)) {
                             errstring = ("there was a car crash\n");
                             return ILLEGAL;
                         }
@@ -353,7 +354,7 @@ Result can_do_move(int src, int dest, int turn, int castle) {
                     int dx = dest_col - src_col;
                     int dy = dest_row - src_row;
                     if (abs(dx) == abs(dy)) {
-                        if (!can_move_to(src, dest)) {
+                        if (!is_path_clear(src, dest)) {
                             errstring = ("there was a car crash\n");
                             return ILLEGAL;
                         }
